@@ -1,0 +1,3 @@
+# Files are copied to the UNO Q (Linux); keep LF line endings on every checkout.
+* text=auto eol=lf
+*.png binary

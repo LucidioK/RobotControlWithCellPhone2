@@ -1,0 +1,3 @@
+name: Robot Control With Cell Phone
+icon: 🤖
+description: Drive a two-motor robot from an Android phone over Bluetooth. The phone tilt is sent as "L+100R-080" style commands and forwarded to the motors.
