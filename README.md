@@ -15,6 +15,8 @@ UNO Q App Lab container — python/main.py (parses, validates, keep-alive)
 UNO Q MCU — sketch/sketch.ino          (Modulino Motors over I2C, 500 ms failsafe)
 ```
 
+See a robot with this code here: https://www.youtube.com/shorts/3nrknw-yI7w
+
 ## Protocol
 
 `L<sign><3 digits>R<sign><3 digits>` + newline, power in percent (0–100).
