@@ -88,13 +88,26 @@ BoxLayout:
 
 
 class RobotRemoteApp(App):
-    def build(self):
+    """
+    Application class for controlling a robot via Bluetooth.
+    """
+
+    def __init__(self, **kwargs):
+        """Initialize the RobotRemoteApp instance."""
+        super().__init__(**kwargs)
+        self.link = None
+        self.addresses = {}
+        self.accelerometer_ok = False
+
+    def build(self) -> Widget:
+        """Build the root widget for the application."""
         self.link = BluetoothLink(on_disconnect=self._lost_connection)
         self.addresses = {}
         self.accelerometer_ok = False
         return Builder.load_string(KV)
 
-    def on_start(self):
+    def on_start(self) -> None:
+        """Handle the start of the application."""
         if platform == "android":
             from android.permissions import request_permissions
             request_permissions(
@@ -106,39 +119,45 @@ class RobotRemoteApp(App):
         try:
             accelerometer.enable()
             self.accelerometer_ok = True
-        except Exception:
+        except RuntimeError:
             self.set_status("Accelerometer not available")
         Window.bind(focus=self._on_focus)
         Clock.schedule_interval(self.update, 1 / 20)
 
-    def on_pause(self):
+    def on_pause(self) -> bool:
+        """Handle the pause of the application."""
         # Never keep driving while the app is in the background.
         self.release_drive()
         self.link.command = STOP
         return True
 
-    def _on_focus(self, window, focused):
+    def _on_focus(self, window: Window, focused: bool) -> None:
+        """Handle the focus change of the application window."""
         if not focused:
             self.release_drive()
 
-    def release_drive(self):
+    def release_drive(self) -> None:
+        """Release the drive button to stop the robot."""
         # A system dialog can swallow the touch-up event, which would leave
         # the button "held" and the robot driving.
         self.root.ids.drive.state = "normal"
 
-    def set_status(self, message):
+    def set_status(self, message: str) -> None:
+        """Update the status label with the given message."""
         print(f"status: {message}")
         self.root.ids.status.text = message
 
-    def on_stop(self):
+    def on_stop(self) -> None:
+        """Handle the stop of the application."""
         self.link.disconnect()
         if self.accelerometer_ok:
             accelerometer.disable()
 
-    def refresh_devices(self):
+    def refresh_devices(self) -> None:
+        """Refresh the list of paired Bluetooth devices."""
         try:
             devices = self.link.paired_devices()
-        except Exception as exc:
+        except OSError as exc:
             self.set_status(f"Bluetooth error: {exc}")
             return
         self.addresses = {f"{name} ({address})": address
@@ -149,7 +168,8 @@ class RobotRemoteApp(App):
         elif not self.link.connected:
             self.set_status("Select the robot and tap Connect")
 
-    def toggle_connection(self):
+    def toggle_connection(self) -> None:
+        """Toggle the connection to the selected robot."""
         if self.link.connected:
             self.link.disconnect()
             self._set_connected(False, "Disconnected")
@@ -163,24 +183,28 @@ class RobotRemoteApp(App):
         threading.Thread(target=self._connect, args=(address,),
                          daemon=True).start()
 
-    def _connect(self, address):
+    def _connect(self, address: str) -> None:
+        """Attempt to connect to the robot at the given address."""
         try:
             self.link.connect(address)
             result = (True, "Connected")
-        except Exception as exc:
+        except OSError as exc:
             result = (False, f"Connection failed: {exc}")
         Clock.schedule_once(lambda dt: self._set_connected(*result))
 
-    def _lost_connection(self):
+    def _lost_connection(self) -> None:
+        """Handle the loss of connection to the robot."""
         Clock.schedule_once(lambda dt: self._set_connected(False, "Connection lost"))
 
-    def _set_connected(self, connected, message):
+    def _set_connected(self, connected: bool, message: str) -> None:
+        """Update the UI and status based on the connection state."""
         ids = self.root.ids
         ids.connect.disabled = False
         ids.connect.text = "Disconnect" if connected else "Connect"
         self.set_status(message)
 
-    def update(self, dt):
+    def update(self, _dt: float) -> None:
+        """Update the robot's control based on accelerometer readings."""
         ids = self.root.ids
         reading = accelerometer.acceleration if self.accelerometer_ok else None
         if not reading or None in reading:
