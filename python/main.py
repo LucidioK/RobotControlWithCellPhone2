@@ -43,7 +43,7 @@ LOG_INTERVAL_S = 1.0
 COMMAND_RE = re.compile(r"^L([+-])(\d{3})R([+-])(\d{3})$")
 
 
-def report(message):
+def report(message: str) -> None:
     """Print a startup status line and record it in STATUS_FILE."""
     print(message)
     try:
@@ -53,7 +53,7 @@ def report(message):
         pass
 
 
-def parse_command(line):
+def parse_command(line: str) -> tuple[int, int] | None:
     """Return (left, right) in -100..100, or None if the line is invalid."""
     match = COMMAND_RE.match(line.strip())
     if not match:
@@ -69,11 +69,24 @@ class MotorOutput:
     """Forwards commands to the MCU, skipping redundant calls."""
 
     def __init__(self):
+        """
+        Initialize the motor output.
+        """
         self._last = None
         self._last_sent_at = 0.0
         self._last_logged_at = 0.0
+        self._blocked = False
 
-    def set(self, left, right, force=False):
+    def set(self, left: int, right: int, force=False) -> None:
+        """
+        Set the motor speeds.
+
+        Args:
+            left (int): The speed for the left motor (-100 to 100).
+            right (int): The speed for the right motor (-100 to 100).
+            force (bool, optional): Whether to send the command even
+                    if it's the same as the last one. Defaults to False.
+        """
         now = time.monotonic()
         if now - self._last_logged_at >= LOG_INTERVAL_S or force:
             print(f"Motors: left {left:+4d}  right {right:+4d}")
@@ -82,20 +95,38 @@ class MotorOutput:
                 and now - self._last_sent_at < KEEPALIVE_S):
             return
         try:
-            Bridge.call("set_motors", left, right)
+            obstacle_mm = Bridge.call("set_motors", left, right)
             self._last = (left, right)
             self._last_sent_at = now
         except Exception as exc:
             print(f"Bridge call failed: {exc}")
+            return
+        # The sketch itself stops the motors; here we only log the change.
+        blocked = isinstance(obstacle_mm, int) and obstacle_mm >= 0
+        if blocked and not self._blocked:
+            print(f"Obstacle at {obstacle_mm / 10:.1f} cm: forward motion blocked")
+        elif self._blocked and not blocked:
+            print("Way is clear again")
+        self._blocked = blocked
 
-    def stop(self):
+    def stop(self) -> None:
+        """
+        Stops the motors.
+        """
         self.set(0, 0, force=True)
 
 
 motors = MotorOutput()
 
 
-def handle_client(client, address):
+def handle_client(client: socket.socket, address: str) -> None:
+    """
+    Handle a client connection.
+
+    Args:
+        client (socket.socket): The client socket.
+        address (str): The client address.
+    """
     print(f"Phone connected: {address}")
     client.settimeout(CLIENT_TIMEOUT_S)
     buffer = b""
@@ -127,6 +158,9 @@ def handle_client(client, address):
 
 
 def phone_server():
+    """
+    Start the phone server.
+    """
     while True:
         server = None
         try:
@@ -154,6 +188,7 @@ STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
 STATUS_FILE.write_text("", encoding="utf-8")
 try:
     report(f"Modulino Motors detected: {Bridge.call('motors_found')}")
+    report(f"Modulino Distance detected: {Bridge.call('distance_found')}")
 except Exception as exc:
     report(f"Could not query the sketch: {exc}")
 

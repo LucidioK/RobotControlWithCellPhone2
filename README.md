@@ -65,6 +65,11 @@ Change `MAX_ANGLE` in `Android/control.py` to adjust sensitivity.
 * The app sends a stop when backgrounded or disconnected.
 * `python/main.py` stops the motors if the phone is silent for 1 s or disconnects.
 * The sketch stops the motors if no command reaches it for 500 ms.
+* The sketch stops the robot when the Modulino Distance sees something closer
+  than 10 cm (clear again above 12 cm). While blocked it still lets the robot
+  back straight away; set `ALLOW_REVERSE_WHEN_BLOCKED = false` in
+  `sketch/sketch.ino` to refuse every movement instead. The App Lab log shows
+  `Obstacle at … cm` / `Way is clear again`.
 
 ## Arduino part (`app.yaml`, `python/`, `sketch/`)
 
@@ -78,18 +83,19 @@ namespace, and Linux only allows Bluetooth sockets in the host namespace
 Debian as a systemd user service and just copies the phone's bytes into a
 Unix socket in the app folder, which the container also sees.
 
-### Wiring (Modulino Motors)
+### Wiring (Modulino Motors + Modulino Distance)
 
-Connect a **Modulino Motors** to the UNO Q's Qwiic connector with the I2C
-cable. Left motor on channel **A**, right motor on channel **B**, and the
-motor battery on the Modulino's motor power input.
+Chain a **Modulino Motors** and a **Modulino Distance** to the UNO Q's Qwiic
+connector with I2C cables. Left motor on channel **A**, right motor on channel
+**B**, and the motor battery on the Modulino's motor power input. Mount the
+distance sensor facing forward.
 
 If a motor turns the wrong way, set `INVERT_LEFT` / `INVERT_RIGHT` in
 `sketch/sketch.ino` (or swap that motor's two wires).
 
 Status LED4 on the UNO Q: **green** = a motor is driven forward, **red** = a
-motor is driven in reverse, **blue** = the Modulino Motors was not found on
-the Qwiic bus at startup (check the cable, then restart the app).
+motor is driven in reverse, **blue** = a Modulino is missing on the Qwiic bus
+(the sketch keeps looking for it every 2 s).
 
 ### Install
 

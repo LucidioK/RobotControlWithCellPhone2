@@ -287,6 +287,8 @@ else
   printf '%s\n' "$status" | sed 's/^/    /'
   printf '%s' "$status" | grep -q "Modulino Motors detected: True" || \
     echo "WARNING: the Modulino Motors was not found - check the Qwiic cables, then redeploy."
+  printf '%s' "$status" | grep -q "Modulino Distance detected: True" || \
+    echo "WARNING: the Modulino Distance was not found - the obstacle stop is OFF. Check the Qwiic cables."
 fi
 
 step "Checking Bluetooth"

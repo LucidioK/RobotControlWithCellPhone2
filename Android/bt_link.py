@@ -27,7 +27,14 @@ SEND_INTERVAL_S = 0.05  # 20 commands per second
 class BluetoothLink:
     """Connects to the robot and streams the latest command at a fixed rate."""
 
-    def __init__(self, on_disconnect=None):
+    def __init__(self, on_disconnect: callable | None):
+        """
+        Initialize the Bluetooth link.
+
+        Args:
+            on_disconnect (callable | None): A function to call when the connection is lost.
+                Defaults to None.
+        """
         self.on_disconnect = on_disconnect
         self.command = "L+000R+000"
         self._socket = None
@@ -36,6 +43,11 @@ class BluetoothLink:
 
     @property
     def connected(self) -> bool:
+        """
+        Check if the link is connected.
+        Returns:
+            bool: True if connected, False otherwise.
+        """
         return self._running
 
     def paired_devices(self) -> list[tuple[str, str]]:
@@ -50,13 +62,17 @@ class BluetoothLink:
             for d in adapter.getBondedDevices().toArray()
         ]
 
-    def connect(self, address: str) -> None:
-        """Blocking connect; raises on failure. Call from a worker thread."""
+    def connect(self, bluetooth_address: str) -> None:
+        """
+        Blocking connect; raises on failure. Call from a worker thread.
+        Args:
+            bluetooth_address (str): The Bluetooth address of the device to connect to.
+        """
         if not ON_ANDROID:
             raise RuntimeError("Bluetooth is only available on Android")
         adapter = BluetoothAdapter.getDefaultAdapter()
         adapter.cancelDiscovery()
-        device = adapter.getRemoteDevice(address)
+        device = adapter.getRemoteDevice(bluetooth_address)
 
         try:
             sock = device.createRfcommSocketToServiceRecord(UUID.fromString(SPP_UUID))

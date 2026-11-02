@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 Android/.buildozer/
 Android/bin/
+.vscode/
