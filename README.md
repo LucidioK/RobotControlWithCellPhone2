@@ -17,6 +17,32 @@ UNO Q MCU — sketch/sketch.ino          (Modulino Motors over I2C, 500 ms fails
 
 See a robot with this code here: https://www.youtube.com/shorts/3nrknw-yI7w
 
+## Deploying (PowerShell 7.3+)
+
+```powershell
+.\deploy_to_arduino.ps1               # USB if plugged in, else SSH over Wi-Fi
+.\deploy_to_arduino.ps1 -Pair 120     # ...then open a 2-minute Bluetooth pairing window
+.\deploy_to_android.ps1               # build the APK in WSL, install and start it
+.\deploy_to_android.ps1 -SkipBuild    # install the last APK without rebuilding
+```
+
+Both scripts give USB devices back from usbipd/WSL (asking for administrator
+rights only for forced bindings) and explain what to fix when something is in
+the way. `Get-Help .\deploy_to_android.ps1 -Detailed` lists all options.
+
+* **Arduino:** finds the board with `arduino-cli`, offers to set up SSH key
+  access on first use, backs up the board's current app to
+  `~/.robot-control-backups`, deploys with LF line endings, restarts the app
+  (compiling and flashing the sketch) and the relay service, then reports
+  whether the Modulino Motors was detected and which phones are paired.
+* **Android:** creates the Buildozer environment in WSL on first use, repairs
+  a corrupted Gradle cache, and detects: no phone/charge-only cable, USB
+  debugging off, missing USB driver, computer not yet authorized, wrong CPU or
+  Android version, and failed or blocked installs.
+
+If scripts are blocked, run them with
+`pwsh -ExecutionPolicy Bypass -File .\deploy_to_arduino.ps1`.
+
 ## Protocol
 
 `L<sign><3 digits>R<sign><3 digits>` + newline, power in percent (0–100).

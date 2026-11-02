@@ -25,6 +25,10 @@ from arduino.app_utils import App, Bridge
 # ~/ArduinoApps/<app>. Both sides see this socket at <app>/.cache/phone.sock.
 PHONE_SOCKET = Path(__file__).resolve().parent.parent / ".cache" / "phone.sock"
 
+# Startup status, also written here for deploy_to_arduino.ps1 to read (the
+# container log is not always readable from the host).
+STATUS_FILE = PHONE_SOCKET.with_name("status.txt")
+
 # Resend the current command at least this often so the sketch failsafe
 # (500 ms) does not stop the motors while the phone holds a steady tilt.
 KEEPALIVE_S = 0.2
@@ -37,6 +41,16 @@ MAX_LINE = 64
 LOG_INTERVAL_S = 1.0
 
 COMMAND_RE = re.compile(r"^L([+-])(\d{3})R([+-])(\d{3})$")
+
+
+def report(message):
+    """Print a startup status line and record it in STATUS_FILE."""
+    print(message)
+    try:
+        with open(STATUS_FILE, "a", encoding="utf-8") as status:
+            status.write(message + "\n")
+    except OSError:
+        pass
 
 
 def parse_command(line):
@@ -123,7 +137,7 @@ def phone_server():
             server.bind(str(PHONE_SOCKET))
             os.chmod(PHONE_SOCKET, 0o660)
             server.listen(1)
-            print(f"Waiting for phone via {PHONE_SOCKET}")
+            report(f"Waiting for phone via {PHONE_SOCKET}")
             while True:
                 client, _ = server.accept()
                 handle_client(client, "Bluetooth relay")
@@ -136,10 +150,12 @@ def phone_server():
                 server.close()
 
 
+STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+STATUS_FILE.write_text("", encoding="utf-8")
 try:
-    print(f"Modulino Motors detected: {Bridge.call('motors_found')}")
+    report(f"Modulino Motors detected: {Bridge.call('motors_found')}")
 except Exception as exc:
-    print(f"Could not query the sketch: {exc}")
+    report(f"Could not query the sketch: {exc}")
 
 threading.Thread(target=phone_server, daemon=True).start()
 
